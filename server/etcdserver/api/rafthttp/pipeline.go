@@ -131,6 +131,7 @@ func (p *pipeline) handle() {
 // post POSTs a data payload to a url. Returns nil if the POST succeeds,
 // error on any failure.
 func (p *pipeline) post(data []byte) (err error) {
+	// mark: peer post: http req
 	u := p.picker.pick()
 	req := createPostRequest(p.tr.Logger, u, RaftPrefix, bytes.NewBuffer(data), "application/protobuf", p.tr.URLs, p.tr.ID, p.tr.ClusterID)
 

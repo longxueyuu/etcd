@@ -796,6 +796,7 @@ func (s *EtcdServer) run() {
 				s.stats.BecomeLeader()
 			}
 		},
+		// mark: ready: updateCommittedIndex
 		updateCommittedIndex: func(ci uint64) {
 			cci := s.getCommittedIndex()
 			if ci > cci {
@@ -840,6 +841,7 @@ func (s *EtcdServer) run() {
 
 	for {
 		select {
+		// mark: apply()
 		case ap := <-s.r.apply():
 			f := schedule.NewJob("server_applyAll", func(context.Context) { s.applyAll(&ep, &ap) })
 			sched.Schedule(f)
@@ -1140,6 +1142,7 @@ func (s *EtcdServer) ForceSnapshot() {
 }
 
 func (s *EtcdServer) triggerSnapshot(ep *etcdProgress) {
+	// mark: etcd trigger
 	if !s.shouldSnapshot(ep) {
 		return
 	}
@@ -1859,7 +1862,7 @@ func (s *EtcdServer) apply(
 	return appliedt, appliedi, shouldStop
 }
 
-// applyEntryNormal applies an EntryNormal type raftpb request to the EtcdServer
+// mark: applyEntryNormal applies an EntryNormal type raftpb request to the EtcdServer
 func (s *EtcdServer) applyEntryNormal(e *raftpb.Entry) {
 	shouldApplyV3 := membership.ApplyV2storeOnly
 	var ar *apply.Result
@@ -2000,6 +2003,7 @@ func (s *EtcdServer) applyConfChange(cc raftpb.ConfChange, confState *raftpb.Con
 	}
 
 	lg := s.Logger()
+	// mark: confChange: confState: etcd server更新到最新的confState
 	*confState = *s.r.ApplyConfChange(cc)
 	s.beHooks.SetConfState(confState)
 	switch cc.Type {
@@ -2120,7 +2124,7 @@ func (s *EtcdServer) snapshot(snapi uint64, confState raftpb.ConfState) {
 		if snapi > s.Cfg.SnapshotCatchUpEntries {
 			compacti = snapi - s.Cfg.SnapshotCatchUpEntries
 		}
-
+		// mark: storage: compact: etcd
 		err = s.r.raftStorage.Compact(compacti)
 		if err != nil {
 			// the compaction was done asynchronously with the progress of raft.

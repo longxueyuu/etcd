@@ -143,6 +143,7 @@ func (sctx *serveCtx) serve(
 		traffic = "grpc+http"
 	}
 
+	// mark: grpc server
 	if sctx.insecure {
 		var gs *grpc.Server
 		var srv *http.Server

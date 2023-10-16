@@ -46,8 +46,9 @@ type commit struct {
 type raftNode struct {
 	proposeC    <-chan string            // proposed messages (k,v)
 	confChangeC <-chan raftpb.ConfChange // proposed cluster config changes
-	commitC     chan<- *commit           // entries committed to log (k,v)
-	errorC      chan<- error             // errors from raft session
+	// mark: committed entry: to be co applied
+	commitC chan<- *commit // entries committed to log (k,v)
+	errorC  chan<- error   // errors from raft session
 
 	id          int      // client ID for raft session
 	peers       []string // raft peer URLs
@@ -149,6 +150,7 @@ func (rc *raftNode) entriesToApply(ents []raftpb.Entry) (nents []raftpb.Entry) {
 
 // publishEntries writes committed log entries to commit channel and returns
 // whether all entries could be published.
+// mark: confChange process
 func (rc *raftNode) publishEntries(ents []raftpb.Entry) (<-chan struct{}, bool) {
 	if len(ents) == 0 {
 		return nil, true
@@ -280,6 +282,7 @@ func (rc *raftNode) startRaft() {
 	rc.snapshotter = snap.New(zap.NewExample(), rc.snapdir)
 
 	oldwal := wal.Exist(rc.waldir)
+	// mark: wal replay
 	rc.wal = rc.replayWAL()
 
 	// signal replay has finished
@@ -315,6 +318,7 @@ func (rc *raftNode) startRaft() {
 		ErrorC:      make(chan error),
 	}
 
+	// mark: transport start
 	rc.transport.Start()
 	for i := range rc.peers {
 		if i+1 != rc.id {
@@ -391,6 +395,7 @@ func (rc *raftNode) maybeTriggerSnapshot(applyDoneC <-chan struct{}) {
 	if rc.appliedIndex > snapshotCatchUpEntriesN {
 		compactIndex = rc.appliedIndex - snapshotCatchUpEntriesN
 	}
+	// mark: compact to learn
 	if err := rc.raftStorage.Compact(compactIndex); err != nil {
 		if err != raft.ErrCompacted {
 			panic(err)
@@ -419,7 +424,7 @@ func (rc *raftNode) serveChannels() {
 	// send proposals over raft
 	go func() {
 		confChangeCount := uint64(0)
-
+		// mark: propose entry
 		for rc.proposeC != nil && rc.confChangeC != nil {
 			select {
 			case prop, ok := <-rc.proposeC:
@@ -448,9 +453,11 @@ func (rc *raftNode) serveChannels() {
 	for {
 		select {
 		case <-ticker.C:
+			// mark: tick application level
 			rc.node.Tick()
 
 		// store raft entries to wal, then publish over commit channel
+		// mark: Ready() example
 		case rd := <-rc.node.Ready():
 			// Must save the snapshot file and WAL snapshot entry before saving any other entries
 			// or hardstate to ensure that recovery after a snapshot restore is possible.

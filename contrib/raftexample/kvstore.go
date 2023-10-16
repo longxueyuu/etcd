@@ -52,6 +52,7 @@ func newKVStore(snapshotter *snap.Snapshotter, proposeC chan<- string, commitC <
 		}
 	}
 	// read commits from raft into kvStore map until error
+	// mark: commit will be applied to state machine: consume commitC channel and apply
 	go s.readCommits(commitC, errorC)
 	return s
 }

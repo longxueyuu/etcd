@@ -272,6 +272,8 @@ func StartEtcd(inCfg *Config) (e *Etcd, err error) {
 	if err = e.servePeers(); err != nil {
 		return e, err
 	}
+
+	// mark: start client servers
 	if err = e.serveClients(); err != nil {
 		return e, err
 	}
@@ -767,7 +769,7 @@ func (e *Etcd) serveClients() (err error) {
 		}
 	}
 
-	// start client servers in each goroutine
+	// mark: start client servers in each goroutine
 	for _, sctx := range e.sctxs {
 		go func(s *serveCtx) {
 			e.errHandler(s.serve(e.Server, &e.cfg.ClientTLSInfo, mux, e.errHandler, e.grpcGatewayDial(splitHttp), splitHttp, gopts...))

@@ -388,6 +388,7 @@ func (cr *streamReader) start() {
 	go cr.run()
 }
 
+// mark: peer streamReader run loop
 func (cr *streamReader) run() {
 	t := cr.typ
 

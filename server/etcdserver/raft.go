@@ -173,6 +173,7 @@ func (r *raftNode) start(rh *raftReadyHandler) {
 			case <-r.ticker.C:
 				r.tick()
 			case rd := <-r.Ready():
+				// mark: Ready()
 				if rd.SoftState != nil {
 					newLeader := rd.SoftState.Lead != raft.None && rh.getLead() != rd.SoftState.Lead
 					if newLeader {
@@ -208,6 +209,7 @@ func (r *raftNode) start(rh *raftReadyHandler) {
 
 				notifyc := make(chan struct{}, 1)
 				raftAdvancedC := make(chan struct{}, 1)
+				// mark: send apply
 				ap := toApply{
 					entries:       rd.CommittedEntries,
 					snapshot:      rd.Snapshot,
@@ -242,6 +244,7 @@ func (r *raftNode) start(rh *raftReadyHandler) {
 				}
 
 				// gofail: var raftBeforeSave struct{}
+				// mark: storage: save
 				if err := r.storage.Save(rd.HardState, rd.Entries); err != nil {
 					r.lg.Fatal("failed to save Raft hard state and entries", zap.Error(err))
 				}
@@ -263,6 +266,7 @@ func (r *raftNode) start(rh *raftReadyHandler) {
 					notifyc <- struct{}{}
 
 					// gofail: var raftBeforeApplySnap struct{}
+					// mark: storage: ApplySnapshot
 					r.raftStorage.ApplySnapshot(rd.Snapshot)
 					r.lg.Info("applied incoming Raft snapshot", zap.Uint64("snapshot-index", rd.Snapshot.Metadata.Index))
 					// gofail: var raftAfterApplySnap struct{}
@@ -273,6 +277,7 @@ func (r *raftNode) start(rh *raftReadyHandler) {
 					// gofail: var raftAfterWALRelease struct{}
 				}
 
+				// mark: storage: Append
 				r.raftStorage.Append(rd.Entries)
 
 				confChanged := false
